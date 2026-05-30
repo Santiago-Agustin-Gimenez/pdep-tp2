@@ -1,5 +1,7 @@
 import Data.List
 
+-- Parte A --
+
 type Componente = (String, Double)
 
 data Plato = UnPlato {
@@ -64,3 +66,40 @@ totalSal unPlato = sumarSal (componentes unPlato)
 
 noAptoHipertension::Plato -> Bool
 noAptoHipertension unPlato = totalSal unPlato > 2
+
+-- Parte B --
+
+platoPepe::Plato
+platoPepe = UnPlato {
+    dificultad = 8,
+    componentes = [("carne", 200), ("harina", 50), ("sal", 5), ("papa", 100), ("tomate", 50), ("cebolla", 40)]
+}
+
+pepe::Participante
+pepe = UnParticipante {
+    nombre = "Pepe Ronccino",
+    trucos = [darSabor 2 5, simplificar, duplicarPorcion],
+    especialidad = platoPepe
+}
+
+-- Parte C --
+
+cocinar::Participante -> Plato
+cocinar unParticipante = foldr (\unTruco unPlato -> unTruco unPlato) (especialidad unParticipante) (trucos unParticipante)
+
+sumarPesos::[Componente] -> Double
+sumarPesos[] = 0
+sumarPesos ((_, peso):xs) = peso + sumarPesos xs
+
+pesoTotal :: Plato -> Double
+pesoTotal unPlato = sumarPesos (componentes unPlato)
+
+esMejorQue::Plato -> Plato -> Bool
+esMejorQue plato1 plato2 = dificultad plato1 > dificultad plato2 && pesoTotal plato1 < pesoTotal plato2
+
+participanteEstrella::[Participante] -> Participante
+participanteEstrella [unParticipante] = unParticipante
+participanteEstrella (x:y:zs)
+    | esMejorQue (cocinar x) (cocinar y) = participanteEstrella (x:zs)
+    | otherwise = participanteEstrella (y:zs)
+
