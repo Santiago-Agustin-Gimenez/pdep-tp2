@@ -2,11 +2,14 @@ import Data.List
 
 -- Parte A --
 
-type Componente = (String, Double)
+data Ingrediente = UnIngrediente {
+    nombreIngrediente::String,
+    pesoIngrediente::Double
+} deriving (Eq, Show)
 
 data Plato = UnPlato {
     dificultad::Int,
-    componentes::[Componente]
+    componentes::[Ingrediente]
 } deriving(Eq, Show)
 
 type Truco = Plato -> Plato
@@ -17,23 +20,34 @@ data Participante = UnParticipante {
     especialidad::Plato
 }
 
+crearIngrediente::String -> Double -> Ingrediente
+crearIngrediente = UnIngrediente
+
+agregarComponente::Ingrediente -> Plato -> Plato
+agregarComponente nuevoIng unPlato = unPlato {componentes = nuevoIng : componentes unPlato}
+
 endulzar::Double -> Truco
-endulzar gramos unPlato = unPlato {componentes = ("azucar", gramos):componentes unPlato}
+endulzar gramos = agregarComponente (crearIngrediente "azucar" gramos)
 
 salar::Double -> Truco
-salar gramos unPlato = unPlato {componentes = ("sal", gramos):componentes unPlato}
+salar gramos = agregarComponente (crearIngrediente "sal" gramos)
 
 darSabor::Double -> Double -> Truco
-darSabor gramosSal gramosAzucar = endulzar gramosAzucar . salar gramosSal
+darSabor gramosSal gramosAzucar = salar gramosSal . endulzar gramosAzucar
+
+duplicarPeso::Ingrediente -> Ingrediente
+duplicarPeso unIng = unIng {pesoIngrediente = pesoIngrediente unIng * 2}
 
 duplicarPorcion::Truco
-duplicarPorcion unPlato = unPlato {componentes = map (\(ingrediente, peso) -> (ingrediente, peso * 2)) (componentes unPlato)}
+duplicarPorcion unPlato = unPlato {componentes = map duplicarPeso (componentes unPlato)}
 
-dejarPesados::[Componente] -> [Componente]
-dejarPesados[] = []
-dejarPesados ((ingrediente, peso):xs)
-    | peso >= 10 = (ingrediente, peso):dejarPesados xs
-    | otherwise = dejarPesados xs
+agruparSiEsPesado::Ingrediente -> [Ingrediente] -> [Ingrediente]
+agruparSiEsPesado unIng acumulador
+    | pesoIngrediente unIng >= 10 = unIng : acumulador
+    | otherwise = acumulador
+
+dejarPesados::[Ingrediente] -> [Ingrediente]
+dejarPesados = foldr agruparSiEsPesado []
 
 esBardo::Plato -> Bool
 esBardo unPlato = length (componentes unPlato) > 5 && dificultad unPlato > 7
@@ -43,26 +57,22 @@ simplificar unPlato
     | esBardo unPlato = unPlato {dificultad = 5, componentes = dejarPesados (componentes unPlato)}
     | otherwise = unPlato
 
-esIngredienteNoVegano::String -> Bool
-esIngredienteNoVegano unIngrediente = unIngrediente `elem` ["carne", "huevo", "leche", "crema", "queso"]
-
 esVegano::Plato -> Bool
-esVegano unPlato = not (any (\(ingrediente, _) -> esIngredienteNoVegano ingrediente) (componentes unPlato))
+esVegano unPlato = not (any (\ing -> nombreIngrediente ing `elem` ["carne", "huevo", "leche", "crema", "queso"]) (componentes unPlato))
 
 esSinTacc::Plato -> Bool
-esSinTacc unPlato = not (any (\(ingrediente, _) -> ingrediente == "harina") (componentes unPlato))
+esSinTacc unPlato = not (any (\ing -> nombreIngrediente ing == "harina") (componentes unPlato))
 
 esComplejo::Plato -> Bool
-esComplejo unPlato = esBardo unPlato
+esComplejo = esBardo
 
-sumarSal::[Componente] -> Double
-sumarSal[] = 0
-sumarSal ((ingrediente, peso):xs)
-    | ingrediente == "sal" = peso + sumarSal xs
-    | otherwise = sumarSal xs
+acumularSal::Ingrediente -> Double -> Double
+acumularSal unIng acc
+    | nombreIngrediente unIng == "sal" = pesoIngrediente unIng + acc
+    | otherwise = acc
 
 totalSal::Plato -> Double
-totalSal unPlato = sumarSal (componentes unPlato)
+totalSal unPlato = foldr acumularSal 0 (componentes unPlato)
 
 noAptoHipertension::Plato -> Bool
 noAptoHipertension unPlato = totalSal unPlato > 2
@@ -72,7 +82,14 @@ noAptoHipertension unPlato = totalSal unPlato > 2
 platoPepe::Plato
 platoPepe = UnPlato {
     dificultad = 8,
-    componentes = [("carne", 200), ("harina", 50), ("sal", 5), ("papa", 100), ("tomate", 50), ("cebolla", 40)]
+    componentes = [
+        UnIngrediente "carne" 200, 
+        UnIngrediente "harina" 50, 
+        UnIngrediente "sal" 5, 
+        UnIngrediente "papa" 100, 
+        UnIngrediente "tomate" 80, 
+        UnIngrediente "cebolla" 15
+    ]
 }
 
 pepe::Participante
@@ -87,19 +104,16 @@ pepe = UnParticipante {
 cocinar::Participante -> Plato
 cocinar unParticipante = foldr (\unTruco unPlato -> unTruco unPlato) (especialidad unParticipante) (trucos unParticipante)
 
-sumarPesos::[Componente] -> Double
-sumarPesos[] = 0
-sumarPesos ((_, peso):xs) = peso + sumarPesos xs
-
-pesoTotal :: Plato -> Double
-pesoTotal unPlato = sumarPesos (componentes unPlato)
+pesoTotal::Plato -> Double
+pesoTotal unPlato = foldr ((+) . pesoIngrediente) 0 (componentes unPlato)
 
 esMejorQue::Plato -> Plato -> Bool
 esMejorQue plato1 plato2 = dificultad plato1 > dificultad plato2 && pesoTotal plato1 < pesoTotal plato2
 
-participanteEstrella::[Participante] -> Participante
-participanteEstrella [unParticipante] = unParticipante
-participanteEstrella (x:y:zs)
-    | esMejorQue (cocinar x) (cocinar y) = participanteEstrella (x:zs)
-    | otherwise = participanteEstrella (y:zs)
+obtenerMejor::Participante -> Participante -> Participante
+obtenerMejor p1 p2
+    | esMejorQue (cocinar p1) (cocinar p2) = p1
+    | otherwise = p2
 
+participanteEstrella::[Participante] -> Participante
+participanteEstrella listaParticipantes = foldr1 obtenerMejor listaParticipantes
