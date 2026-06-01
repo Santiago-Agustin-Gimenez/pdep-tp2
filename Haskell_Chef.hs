@@ -49,22 +49,22 @@ agruparSiEsPesado unIng acumulador
 dejarPesados::[Ingrediente] -> [Ingrediente]
 dejarPesados = foldr agruparSiEsPesado []
 
-esBardo::Plato -> Bool
-esBardo unPlato = length (componentes unPlato) > 5 && dificultad unPlato > 7
+esComplejo::Plato -> Bool
+esComplejo unPlato = length (componentes unPlato) > 5 && dificultad unPlato > 7
 
 simplificar::Truco
 simplificar unPlato 
-    | esBardo unPlato = unPlato {dificultad = 5, componentes = dejarPesados (componentes unPlato)}
+    | esComplejo unPlato = unPlato {dificultad = 5, componentes = dejarPesados (componentes unPlato)}
     | otherwise = unPlato
 
+noTieneIngredientes::[String] -> Plato -> Bool
+noTieneIngredientes listaProhibida unPlato = not (any (\ing -> nombreIngrediente ing `elem` listaProhibida) (componentes unPlato))
+
 esVegano::Plato -> Bool
-esVegano unPlato = not (any (\ing -> nombreIngrediente ing `elem` ["carne", "huevo", "leche", "crema", "queso"]) (componentes unPlato))
+esVegano unPlato = noTieneIngredientes ["carne", "huevo", "leche", "crema", "queso"] unPlato
 
 esSinTacc::Plato -> Bool
-esSinTacc unPlato = not (any (\ing -> nombreIngrediente ing == "harina") (componentes unPlato))
-
-esComplejo::Plato -> Bool
-esComplejo = esBardo
+esSinTacc unPlato = noTieneIngredientes ["harina"] unPlato
 
 acumularSal::Ingrediente -> Double -> Double
 acumularSal unIng acc
