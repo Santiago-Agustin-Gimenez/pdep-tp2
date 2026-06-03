@@ -50,7 +50,7 @@ dejarPesados::[Ingrediente] -> [Ingrediente]
 dejarPesados = foldr agruparSiEsPesado []
 
 esComplejo::Plato -> Bool
-esComplejo unPlato = length (componentes unPlato) > 5 && dificultad unPlato > 7
+esComplejo unPlato = dificultad unPlato > 7 && not (null (drop 5 (componentes unPlato)))
 
 simplificar::Truco
 simplificar unPlato 
@@ -117,3 +117,14 @@ obtenerMejor p1 p2
 
 participanteEstrella::[Participante] -> Participante
 participanteEstrella listaParticipantes = foldr1 obtenerMejor listaParticipantes
+
+-- Parte D --
+
+armarComponente::Int -> Ingrediente
+armarComponente n = UnIngrediente ("ingrediente " ++ show n) (fromIntegral n)
+
+platinum :: Plato
+platinum = UnPlato {
+    dificultad = 10,
+    componentes = map armarComponente [1..]
+}
